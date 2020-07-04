@@ -1,0 +1,344 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+SE ESTABLECE EL ÁREA DE TRABAJO Y SE LEN LOS DATOS. rm() limpia memoria, setwd() área de trabajo. Con read.csv y read_excell leemos los datos 
+
+```{r}
+rm(list=ls())
+setwd("c:/Rprograming/Modelo-Consumo-Cerveza")
+E1<-read.csv("Datos_Consumo_Cerveza.csv",header = T,sep = ";",dec = ".")
+head(E1) # Muestra algunas filas de los datos con encabezado
+library(readxl) #Carga el paquete
+Datos <- read_excel("Datos_Consumo_Cerveza.xls")
+Datos$X4t <- as.numeric(Datos$X4t)
+Datos=data.frame(Datos) # Aqui se estable que Tiempo es una hoja de Excel
+attach(Datos)
+head(Datos)
+library(normtest)
+
+```
+
+A CONTINUACIÓN SE CONSTRUYEN LAS MATRICES DE DATOS Y LAS VARIABLES
+```{r}
+X0 <- as.matrix(cbind(1,Datos[,3:6])) 
+y0 <- as.matrix(Datos[,2]) 
+X <- X0[1:52,] 
+y <- y0[1:52,] 
+X1 <- as.matrix(cbind(1,Datos[1:52,3:6]))
+Y1 <- as.matrix(Datos[1:52,2])
+yta <- y-mean(y) 
+x2t <- X1[,2:2]
+x2ta <- x2t-mean(x2t)
+x3t <- X1[,3:3]
+x3ta <- x3t-mean(x3t)
+x4t <- X1[,4:4]
+x4ta <- x4t-mean(x4t)
+x5t <- X1[,5:5]
+x5ta <- x5t-mean(x5t)
+
+```
+
+ESTIMACIÓN PASO A PASO
+
+
+```{r}
+XtX = t(X)%*%X  
+XtX
+XtX_inv <- solve(XtX) 
+XtX_inv
+Xty <- t(X)%*%y
+Xty
+b <- XtX_inv%*%Xty # 
+b 
+yte <- X%*%b #Calcula yt estimado
+
+```
+```{r}
+Xf <- X0[53:54,]
+Xf 
+ytf <- Xf%*%b  
+ytf
+
+```
+
+ANÁLISIS GRAFICO Y PRUEBAS DE NORMALIDAD
+
+
+```{r}
+plot(y,yte)
+et <- y - yte
+summary(et)
+hist(et, seq(-12.0, 8.0, by=2.0), prob=TRUE)
+curve(dnorm(x,mean = 0,sd=3.878),col=1,lty=2,lwd=3,add = TRUE)
+boxplot(et)
+jb.norm.test(et)
+g1_qq <- qqnorm(et,col="black")
+qqline(et,col="red")
+
+# OTRA FORMA PARA YT vs YTE
+plot(y,t="l")
+lines(yte,lty=3)
+legend(x=30,y=70,legend = c("observado","estimado"),lty = c(1,3))
+
+```
+
+
+SUMAS DE CUADRADOS R2 Y EC(16)
+```{r}
+(TSS=t(y)%*%y-length(y)*mean(y)^2)
+ESS=t(b)%*% XtX %*%b-length(y)*mean(y)^2
+ESS
+RSS=t(et)%*%et
+RSS
+TSS_e16=ESS+RSS
+TSS_e16
+R_2<-ESS[1,1]/TSS[1,1]
+R_2
+
+```
+
+ESTIMACIÓN DEL MODELO COMANDOS: lm() “Entre paréntesis esta la ecuación”. A CONTINUACIÓN, SE HACEN LOS PRONÓSTICOS
+
+```{r}
+eq1 <- lm(y~X[,2:5])
+eq11=lm(y~x2t+x3t+x4t+x5t)
+summary(eq1)
+(b1 <- coef(eq1))
+et1 <- resid(eq1)
+ytest <- fitted(eq1)
+# Por comandos
+Ytf_lm <- Xf%*%eq1$coefficients
+Ytf_lm
+plot(eq1)
+
+```
+
+ESTIMACIÓN DEL MODELO EN DESVIACIONES A LA MEDIA
+
+```{r}
+I52 <- diag(52)
+vi <- rep(1,52)  
+Miit <- vi%*% t(vi)
+vi1 <- matrix(nrow=52, ncol=1, rep(1, 52))
+Miit1 <- matrix(nrow=52, ncol=52, rep(1,52*52))
+A <- I52-(1/52)*Miit
+X2 <- X1[,2:5]
+X21 <- X0[1:52,2:5] 
+Xa <- A%*%X2
+ya <- A%*%y
+XatXa <- t(Xa)%*%Xa
+XatXa
+XatXa_inv <- solve(XatXa)
+XatXa_inv
+Xatya <- t(Xa)%*%ya
+Xatya
+b2 <- XatXa_inv%*%Xatya
+b2
+# OBTENEMOS EL INTERCEPTO
+b1_d=mean(y)-b2[1,1]*mean(x2t)-b2[2,1]*mean(x3t)- b2[3,1]*mean(x4t)- b2[4,1]*mean(x5t)
+"Intercepto estimado"
+b1_d
+```
+ESTIMACIÓN CON COMANDOS 
+
+```{r}
+eq1a <- lm(ya~Xa-1)
+summary(eq1a)
+eq1aa <- lm(yta~x2ta+x3ta+x4ta+x5ta-1)
+summary(eq1aa)
+
+```
+
+SUMAS DE CUADRADOS MODELO EN DESVIACIONES
+```{r}
+ytae <- Xa%*%b2
+eta <-  ya-ytae
+TSSa=t(ya)%*%ya
+TSSa
+ESSa=t(b2)%*% XatXa %*%b2
+ESSa
+RSSa=t(eta)%*%eta
+RSSa
+
+```
+COMPARACIÓN DE SUMAS DE CUADRADOS
+```{r}
+col1<-c("SQ","ESS","RSS","TSS","TSS13","R2")
+col2<-c("Mod_niv",ESS,RSS,TSS,TSS_e16,R_2)
+col3<-c("Mod_dif",ESSa,RSSa,TSSa,TSS_e16,R_2)
+Tabla_SQ <- cbind(col1,col2,col3)
+Tabla_SQ
+
+```
+
+ESTIMACIÓN DE LA VARIANZA
+
+```{r}
+S2<- RSS[1,1]/47
+Var_b=S2*XtX_inv
+S2b1=Var_b[1,1]
+S2b2=Var_b[2,2]
+S2b3=Var_b[3,3]
+S2b4=Var_b[4,4]
+S2b5=Var_b[5,5]
+sb1=sqrt(S2b1)
+sb2=sqrt(S2b2)
+sb3=sqrt(S2b3)
+sb4=sqrt(S2b4)
+sb5=sqrt(S2b5)
+colum1<-c("Coef","b1","b2","b3","b4","b5")
+colum2<-c("Estimación",b[1,1], b[2,1], b[3,1], b[4,1], b[5,1])
+colum3<-c("Varianza",S2b1, S2b2, S2b3, S2b4, S2b5)
+colum4<-c("Error_Estandar",sb1, sb2, sb3, sb4, sb5)
+Tabla_Coef_Var <- cbind(colum1,colum2,colum3,colum4)
+Tabla_Coef_Var
+
+```
+
+PRUEBAS DE SIGNIFICANCIA INDIVIDUAL
+```{r}
+tb1=b[1,1]/sb1
+pb1=2*(1-pt(abs(tb1),47))
+tb2=b[2,1]/sb2
+pb2=2*(1-pt(abs(tb2),47))
+tb3=b[3,1]/sb3
+pb3=2*(1-pt(abs(tb3),47))
+tb4=b[4,1]/sb4
+pb4=2*pt(abs(tb4),47, lower.tail = FALSE)
+tb5=b[5,1]/sb5
+pb5=2*(1-pt(abs(tb5),47))
+colum1<-c("Coef","b1","b2","b3","b4","b5")
+colum2<-c("Estimación",b[1,1], b[2,1], b[3,1], b[4,1], b[5,1])
+colum4<-c("Error_Estandar",sb1, sb2, sb3, sb4, sb5)
+colum5<-c("Valores t",tb1, tb2, tb3, tb4, tb5)
+colum6<-c("Valores p",pb1, pb2, pb3, pb4, pb5)
+Tabla_analisis_reg <- cbind(colum1,colum2, colum4,colum5,colum6)
+Tabla_analisis_reg
+
+```
+
+SIG. REGRESIÓN
+
+```{r}
+Id4 <- diag(4)
+MR= cbind(0,Id4)
+MR
+vr=rep(0,4)
+num1=MR%*%b-vr
+num2=MR%*%XtX_inv%*%t(MR)
+num3=solve(num2)
+num4=t(num1)%*%num3%*%num1
+Fc_sig_reg=(num4[1,1]/4)/S2
+Fc_sig_reg
+FC_sig_reg1=(ESS/4)/(RSS/47)
+pv_sig_reg=pf(Fc_sig_reg,4,47, lower.tail = FALSE)
+pv_sig_reg
+pv_sig_reg1= 1-pf(Fc_sig_reg,4,47, lower.tail = T)
+columsg1<-c("Estadística","FC_36","FC_41","P_Valor")
+columsg2<-c("Valor",Fc_sig_reg,FC_sig_reg1,pv_sig_reg)
+Tabla_Sig_reg= cbind(columsg1,columsg2)
+Tabla_Sig_reg
+
+```
+A CONTINUACIÓN CONSTRUIMOS LOS INTERVALOS DE CONFIANZA PARA LOS COEFICIENTES
+
+```{r}
+ta2=qt(0.025,47,lower.tail = FALSE)
+ta2
+lib1=b[1,1]-ta2*sb1
+lib1
+lsb1=b[1,1]+ta2*sb1
+lsb1 
+lib2=b[2,1]-ta2*sb2
+lib2
+lsb2=b[2,1]+ta2*sb2
+lsb2
+lib3=b[3,1]-ta2*sb3
+lib3
+lsb3=b[3,1]+ta2*sb3
+lsb3
+lib4=b[4,1]-ta2*sb4
+lib4
+lsb4=b[4,1]+ta2*sb4
+lsb4
+lib5=b[5,1]-ta2*sb5
+lib5
+lsb5=b[5,1]+ta2*sb5
+lsb5
+
+```
+
+
+```{r}
+(Tab_Inter_Eq=confint(eq1))
+
+```
+PRUEBA DE RESTRICCIONES LINEALES: B2 + 2B4 = 0 Y B5=1/1000 ^2
+
+```{r}
+f1=c(0,1,0,2,0)
+f2=c(0,0,0,0,1)
+R=cbind(f1,f2)
+R=t(R)
+R
+r=c(0,1/1000)
+r
+p1=R%*%b-r
+p1
+p0=XtX_inv%*%t(R)
+"XtX_inv*Rt"
+p0
+p2=solve(R%*%XtX_inv%*%t(R))
+p2
+p3=t(p1)%*%p2%*%p1
+p3
+fc=(p3/2)/S2
+fc
+pv=pf(fc,2,47,lower.tail = F)
+pv
+
+```
+
+ESTIMACIÓN DEL MODELO RESTRINGIDO
+
+```{r}
+br=b+XtX_inv%*%t(R)%*%p2%*%(r-R%*%b)
+"El estimador OLS restringido es"
+br
+prueba=br[2,1]+2*br[4,1]
+"Vefificación de la restricción 1"
+prueba
+ye_r=X%*%br
+et_r=y-ye_r
+RSSr=t(et_r)%*%et_r
+"El RSSr es"
+RSSr
+fc1=((RSSr-RSS)/2)/S2
+"El Fc de la ecuación (44) es"
+fc1
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
