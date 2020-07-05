@@ -3,7 +3,8 @@ Modelo De Consumo
 Descarga los datos .xls y .csv
 Descarga el archivo R Markdown .RMD
 ---------------------------------------
-
+Aparte puedes encontrar una hermosa presentacion en .HTML hecha con R knit
+---------------------------------------
 En el siguiente repositoriose encontrara con el analisis estadistico de un modelo de consumo de cerveza en donde se obtienen los estimadores de minimos cuadrados OLS, se hace un  a prueba de normalidad con los cuantiles teoricos y los muestrales, la prueba de nrmalidad Jarque-Bera, una prueba de los residuales estandarizados para hallar datos atipicos (Cooks) y los residuales estandarizados frente a losvalores ajustados (Por el metodo Matricial)
 
 De igual forma se ajusta el modelo de regresion para obtener os estimadores por medio del comando lm() y luego se hace un analisis de significancia de los estimadores del modelo con un nvel de significalcia alpha del 5% usando el P-Valor, se hace la prueba de significancia de la regresion usando tambien el P-Valor con la estaistica de prueba F (Fisher-Snecdor) con 4 y 48 grados de libertad, y finalmente con lo anterior se determina el coeficiente de determinacion R_Cuadrado y R_cuadrado ajustado con 48 grados de libertad.
