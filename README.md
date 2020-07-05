@@ -1,4 +1,5 @@
-Modelo De Consumo 
+Modelo De Consumo
+_________________________________________
 
 Descarga los datos .xls y .csv
 Descarga el archivo R Markdown .RMD
